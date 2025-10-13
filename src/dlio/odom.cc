@@ -14,6 +14,7 @@
 #include "dlio/utils.h"
 
 #include <queue>
+#include <chrono> // ADDED: For high-resolution computation time measurement
 
 #include "rclcpp/qos.hpp"
 
@@ -760,7 +761,8 @@ void dlio::OdomNode::callbackPointCloud(const sensor_msgs::msg::PointCloud2::Sha
   this->main_loop_running = true;
   lock.unlock();
 
-  double then = this->now().seconds();
+  // --- START TIME MEASUREMENT (Using high-resolution clock) ---
+  auto start_time = std::chrono::high_resolution_clock::now();
 
   if (this->first_scan_stamp == 0.) {
     this->first_scan_stamp = rclcpp::Time(pc->header.stamp).seconds();
@@ -844,8 +846,13 @@ void dlio::OdomNode::callbackPointCloud(const sensor_msgs::msg::PointCloud2::Sha
   this->publish_thread = std::thread( &dlio::OdomNode::publishToROS, this, published_cloud, this->T_corr );
   this->publish_thread.detach();
 
-  // Update some statistics
-  this->comp_times.push_back(this->now().seconds() - then);
+  // --- END TIME MEASUREMENT AND CALCULATION ---
+  auto end_time = std::chrono::high_resolution_clock::now();
+  // Calculate duration in seconds (double) for consistency with comp_times container
+  std::chrono::duration<double> duration_sec = end_time - start_time;
+  this->comp_times.push_back(duration_sec.count()); // Store high-precision time in seconds
+  // ---------------------------------------------
+
   this->gicp_hasConverged = this->gicp.hasConverged();
 
   // Debug statements and publish custom DLIO message

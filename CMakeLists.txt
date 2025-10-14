@@ -23,7 +23,10 @@ find_package(pcl_ros REQUIRED)
 
 find_package(PCL REQUIRED)
 find_package( Eigen3 REQUIRED )
-find_package(Threads REQUIRED)
+# find_package(Threads REQUIRED)
+
+# MODERN WAY TO FIND OPENMP
+find_package(OpenMP)
 
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
@@ -60,13 +63,33 @@ add_library(nano_gicp STATIC
   src/nano_gicp/lsq_registration.cc
   src/nano_gicp/nano_gicp.cc
 )
-target_link_libraries(nano_gicp ${PCL_LIBRARIES} ${OpenMP_LIBS} nanoflann)
+# OpenMP not needed for static library
+# target_link_libraries(nano_gicp ${PCL_LIBRARIES} ${OpenMP_LIBS} nanoflann)
+target_link_libraries(nano_gicp ${PCL_LIBRARIES} nanoflann)
 ament_target_dependencies(nano_gicp)
 
 # Odometry Node
 add_executable(dlio_odom_node src/dlio/odom_node.cc src/dlio/odom.cc)
-target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)
-ament_target_dependencies(dlio_odom_node "tf2_ros" "pcl_ros" "nav_msgs" "pcl_conversions" "rclcpp" "sensor_msgs" "geometry_msgs")
+# target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)
+# ament_target_dependencies(dlio_odom_node "tf2_ros" "pcl_ros" "nav_msgs" "pcl_conversions" "rclcpp" "sensor_msgs" "geometry_msgs")
+
+if(OpenMP_CXX_FOUND)
+  # Correctly applies the compiler flag (-fopenmp) and links the library (-lgomp)
+  target_link_libraries(dlio_odom_node PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+# Link other libraries
+target_link_libraries(dlio_odom_node 
+  rclcpp::rclcpp
+  ${PCL_LIBRARIES} 
+  nano_gicp # Your local library
+)
+
+# Use 'dlio_odom_node' as the first argument in ament_target_dependencies
+ament_target_dependencies(dlio_odom_node 
+  "tf2_ros" "pcl_ros" "nav_msgs" 
+  "pcl_conversions" "rclcpp" "sensor_msgs" "geometry_msgs"
+)
 
 # Mapping Node
 add_executable (dlio_map_node src/dlio/map_node.cc src/dlio/map.cc)
@@ -86,17 +109,18 @@ install( DIRECTORY cfg launch
          DESTINATION share/${PROJECT_NAME} 
 )
 
-add_compile_options(-std=c++14)
+# removed line from original cmake
+# add_compile_options(-std=c++14)
 link_directories(${PCL_LIBRARY_DIRS})
 
-include(FindOpenMP)
-if(OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-else(OPENMP_FOUND)
-  message("ERROR: OpenMP could not be found.")
-endif(OPENMP_FOUND)
+# include(FindOpenMP)
+# if(OPENMP_FOUND)
+#   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+#   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+#   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+# else(OPENMP_FOUND)
+#   message("ERROR: OpenMP could not be found.")
+# endif(OPENMP_FOUND)
 file(WRITE ${CMAKE_BINARY_DIR}/test_cpuid.cpp "#include <cpuid.h>")
 try_compile(HAS_CPUID ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/test_cpuid.cpp)
 file(REMOVE ${CMAKE_BINARY_DIR}/test_cpuid.cpp)
@@ -104,6 +128,6 @@ if(HAS_CPUID)
   add_compile_definitions(HAS_CPUID)
 endif()
 
-target_compile_options(dlio_odom_node PRIVATE ${OpenMP_FLAGS})
+# target_compile_options(dlio_odom_node PRIVATE ${OpenMP_FLAGS})
 
-target_compile_options(dlio_map_node PRIVATE ${OpenMP_FLAGS})
+# target_compile_options(dlio_map_node PRIVATE ${OpenMP_FLAGS})

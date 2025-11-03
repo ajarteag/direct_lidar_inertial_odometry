@@ -50,6 +50,8 @@ include_directories(${CUDA_INCLUDE_DIRS})  # ADDED: For Nsight Profiling
 include_directories(include)
 include_directories(SYSTEM)
 
+link_directories(/usr/local/cuda/lib64)  # ADDED: For Nsight Profiling
+
 # NanoFLANN
 add_library(nanoflann STATIC
   src/nano_gicp/nanoflann.cc

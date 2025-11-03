@@ -16,7 +16,7 @@
 #include <queue>
 #include <chrono> // ADDED: For high-resolution computation time measurement
 
-#include <nvtx3/nvtx3.hpp> // ADDED: For nsight systems & compute profiling
+#include <nvtx3/nvToolsExt.h> // ADDED: For nsight systems & compute profiling
 
 #include "rclcpp/qos.hpp"
 

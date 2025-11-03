@@ -836,10 +836,13 @@ void dlio::OdomNode::callbackPointCloud(const sensor_msgs::msg::PointCloud2::Sha
   }
 
   // Convert incoming scan into DLIO format
+  nvtxRangePushA("Preprocessing"); // Start Range
   this->getScanFromROS(pc);
 
   // Preprocess points
   this->preprocessPoints();
+
+  nvtxRangePop(); // End Preprocessing
 
   if (!this->first_valid_scan)
   {
@@ -876,11 +879,16 @@ void dlio::OdomNode::callbackPointCloud(const sensor_msgs::msg::PointCloud2::Sha
     return;
   }
 
+  // --- START CORE ODOMETRY CALCULATIONS (GICP + IMU/GEO) ---
+  nvtxRangePushA("Core_Odometry_Loop");
+
   // Get the next pose via IMU + S2M + GEO
   this->getNextPose();
 
   // Update current keyframe poses and map
   this->updateKeyframes();
+
+  nvtxRangePop(); // End Core Odometry Loop
 
   // Build keyframe normals and submap if needed (and if we're not already waiting)
   if (this->new_submap_is_ready)
@@ -1919,6 +1927,7 @@ void dlio::OdomNode::buildSubmap(State vehicle_state)
 
 void dlio::OdomNode::buildKeyframesAndSubmap(State vehicle_state)
 {
+  nvtxRangePushA("Submap_Update_Async"); // Start Range
 
   // transform the new keyframe(s) and associated covariance list(s)
   std::unique_lock<decltype(this->keyframes_mutex)> lock(this->keyframes_mutex);
@@ -1956,6 +1965,8 @@ void dlio::OdomNode::buildKeyframesAndSubmap(State vehicle_state)
   this->pauseSubmapBuildIfNeeded();
 
   this->buildSubmap(vehicle_state);
+
+  nvtxRangePop(); // End Submap Update Async
 }
 
 void dlio::OdomNode::pauseSubmapBuildIfNeeded()

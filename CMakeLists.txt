@@ -20,6 +20,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
+find_package(CUDA REQUIRED)  # ADDED: For Nsight Profiling
 
 find_package(PCL REQUIRED)
 find_package( Eigen3 REQUIRED )
@@ -44,6 +45,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 
 include_directories(${PCL_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${CUDA_INCLUDE_DIRS})  # ADDED: For Nsight Profiling
 
 include_directories(include)
 include_directories(SYSTEM)
@@ -65,7 +67,7 @@ ament_target_dependencies(nano_gicp)
 
 # Odometry Node
 add_executable(dlio_odom_node src/dlio/odom_node.cc src/dlio/odom.cc)
-target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp)
+target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp ${CUDA_LIBRARIES} nvtx3)  # MODIFIED: For Nsight Profiling
 ament_target_dependencies(dlio_odom_node "tf2_ros" "pcl_ros" "nav_msgs" "pcl_conversions" "rclcpp" "sensor_msgs" "geometry_msgs")
 
 # Mapping Node

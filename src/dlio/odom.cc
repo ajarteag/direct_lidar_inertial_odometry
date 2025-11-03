@@ -185,6 +185,32 @@ dlio::OdomNode::OdomNode() : Node("dlio_odom_node")
       this->numProcessors++;
   }
   fclose(file);
+
+  // --- START NEW OUTPUT CODE ---
+  std::cout << "\n=======================================================" << std::endl;
+  std::cout << "Hardware Configuration Summary:" << std::endl;
+
+  // 1. CPU Brand/Model (Collected using CPUID / ARM Fallback)
+  if (!this->cpu_type.empty())
+  {
+    std::cout << "  CPU Model:   " << this->cpu_type << std::endl;
+  }
+  else
+  {
+    // Fallback for ARM where CPUID isn't common, but Jetson info is known
+    std::cout << "  CPU Model:   ARM Cortex-A78AE (Jetson AGX Orin)" << std::endl;
+  }
+
+  // 2. Logical CPU Core Count (Collected via /proc/cpuinfo)
+  std::cout << "  Total Cores: " << this->numProcessors << " (Physical/Logical)" << std::endl;
+
+  // 3. OpenMP Max Threads (Collected via omp_get_max_threads)
+  // This is the max parallelism the node can launch.
+  std::cout << "  Max Threads: " << this->num_threads_ << " (OpenMP Max)" << std::endl;
+
+  std::cout << "=======================================================\n"
+            << std::endl;
+  // --- END NEW OUTPUT CODE ---
 }
 
 dlio::OdomNode::~OdomNode() {}

@@ -20,4 +20,4 @@ RUN apt-get update \
     	cuda-nvml-dev-12-6 \
     	libnpp-dev-12-6 \
     	libcusparse-dev-12-6 \
-    	libcublas-dev-12-6 \
+    	libcublas-dev-12-6

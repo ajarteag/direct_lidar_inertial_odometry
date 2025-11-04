@@ -12,6 +12,7 @@
 
 #include "dlio/odom.h"
 #include "dlio/utils.h"
+#include "cuda_kernel.h"
 
 #include <queue>
 #include <chrono> // ADDED: For high-resolution computation time measurement
@@ -789,7 +790,8 @@ void dlio::OdomNode::deskewPointcloud()
   // update prior to be the estimated pose at the median time of the scan (corresponds to this->scan_stamp)
   this->T_prior = frames[median_pt_index];
 
-#pragma omp parallel for num_threads(this->num_threads_)
+  // #pragma omp parallel for num_threads(this->num_threads_)
+  // TODO parallelize nested for loop
   for (int i = 0; i < timestamps.size(); i++)
   {
 
@@ -800,7 +802,13 @@ void dlio::OdomNode::deskewPointcloud()
     {
       auto &pt = deskewed_scan_->points[k];
       pt.getVector4fMap()[3] = 1.;
-      pt.getVector4fMap() = T * pt.getVector4fMap();
+      // pt.getVector4fMap() = T * pt.getVector4fMap();
+
+      // Call CUDA kernel
+      Eigen::Vector4f vector4fMap = pt.getVector4fMap();
+      cu_dot_kernel_launch(&T, &vector4fMap, &vector4fMap);
+      // Not sure if this assignment is necessary, keeping it to ensure correctness
+      pt.getVector4fMap() = vector4fMap;
     }
   }
 

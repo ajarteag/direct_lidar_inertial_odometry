@@ -791,26 +791,20 @@ void dlio::OdomNode::deskewPointcloud()
   this->T_prior = frames[median_pt_index];
 
   // #pragma omp parallel for num_threads(this->num_threads_)
-  // TODO parallelize nested for loop
-  for (int i = 0; i < timestamps.size(); i++)
-  {
+  // for (int i = 0; i < timestamps.size(); i++)
+  // {
 
-    Eigen::Matrix4f T = frames[i] * this->extrinsics.baselink2lidar_T;
+  //   Eigen::Matrix4f T = frames[i] * this->extrinsics.baselink2lidar_T;
 
-    // transform point to world frame
-    for (int k = unique_time_indices[i]; k < unique_time_indices[i + 1]; k++)
-    {
-      auto &pt = deskewed_scan_->points[k];
-      pt.getVector4fMap()[3] = 1.;
-      // pt.getVector4fMap() = T * pt.getVector4fMap();
-
-      // Call CUDA kernel
-      Eigen::Vector4f vector4fMap = pt.getVector4fMap();
-      cu_dot_kernel_launch(&T, &vector4fMap, &vector4fMap);
-      // Not sure if this assignment is necessary, keeping it to ensure correctness
-      pt.getVector4fMap() = vector4fMap;
-    }
-  }
+  //   // transform point to world frame
+  //   for (int k = unique_time_indices[i]; k < unique_time_indices[i + 1]; k++)
+  //   {
+  //     auto &pt = deskewed_scan_->points[k];
+  //     pt.getVector4fMap()[3] = 1.;
+  //     pt.getVector4fMap() = T * pt.getVector4fMap();
+  //   }
+  // }
+  deskew_cuda(this->extrinsics.baselink2lidar_T, frames, deskewed_scan_->points, unique_time_indices);
 
   this->deskewed_scan = deskewed_scan_;
   this->deskew_status = true;

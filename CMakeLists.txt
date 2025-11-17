@@ -32,6 +32,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
+SET(CUDA_NVCC_FLAGS "-arch=compute_80" CACHE STRING "nvcc flags" FORCE)
+
 # Not all machines have <cpuid.h> available
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
@@ -72,13 +74,14 @@ ament_target_dependencies(nano_gicp)
 cuda_add_executable(dlio_odom_node
   src/dlio/odom_node.cc
   src/dlio/odom.cc
-  src/dlio/test_kernels.cu
+  # src/dlio/test_kernels.cu
+  src/dlio/preprocess_kernel.cu
 )
 target_include_directories(
   dlio_odom_node PUBLIC
   ${CUDA_INCLUDE_DIRS}
 )
-target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp ${CUDA_LIBRARIES} nvToolsExt)  # MODIFIED: For Nsight Profiling
+target_link_libraries(dlio_odom_node ${PCL_LIBRARIES} ${OpenMP_LIBS} Threads::Threads nano_gicp ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} nvToolsExt)  # MODIFIED: For Nsight Profiling
 ament_target_dependencies(dlio_odom_node "tf2_ros" "pcl_ros" "nav_msgs" "pcl_conversions" "rclcpp" "sensor_msgs" "geometry_msgs")
 
 # Mapping Node

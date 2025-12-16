@@ -35,55 +35,64 @@ void deskew_cuda(
 
     float *baselink2lidar_T_cuda;   // baselink to lidar transform
     float **baselink2lidar_Ts_cuda; // pointer for batched multiplication
+
     float **frames_cuda;            // pointer to frame transforms
+    float *frames2d_cuda;
+
     float **frame2baselink_T_cuda;  // pointer for frame results
+    float *frame2baselink2d_T_cuda;
+
     float **points_cuda;            // pointer to points
+    float *points2d_cuda;
+
     float **Ts_cuda;                // pointer to point transforms
+
     float **result;                 // pointer to results
+    float *result2d_cuda;                 // pointer to results
 
     // Allocate memory
     cudaMallocManaged(&baselink2lidar_T_cuda, sizeof(float) * 16);
     cudaMallocManaged(&baselink2lidar_Ts_cuda, sizeof(float *) * num_frames);
+
     cudaMallocManaged(&frames_cuda, sizeof(float *) * num_frames);
+    cudaMallocManaged(&frames2d_cuda, sizeof(float) * 16 * num_frames);
+
     cudaMallocManaged(&frame2baselink_T_cuda, sizeof(float *) * num_frames);
+    cudaMallocManaged(&frame2baselink2d_T_cuda, sizeof(float) * 16 * num_frames);
 
     cudaMallocManaged(&points_cuda, sizeof(float *) * num_points);
+    cudaMallocManaged(&points2d_cuda, sizeof(float) * 4 * num_points);
+
     cudaMallocManaged(&Ts_cuda, sizeof(float *) * num_points);
     cudaMallocManaged(&result, sizeof(float *) * num_points);
+    cudaMallocManaged(&result2d_cuda, sizeof(float) * 4 * num_points);
 
     memcpy(baselink2lidar_T_cuda, baselink2lidar_T.data(), sizeof(float) * 16);
     for (int i = 0; i < num_frames; i++)
     {
         baselink2lidar_Ts_cuda[i] = baselink2lidar_T_cuda;
-        float *frame_cuda;
-        cudaMallocManaged(&frame_cuda, sizeof(float) * 16);
+        float *frame_cuda = frames2d_cuda + i * 16;
         memcpy(frame_cuda, frames[i].data(), sizeof(float) * 16);
         frames_cuda[i] = frame_cuda;
 
-        float *result_cuda;
-        cudaMallocManaged(&result_cuda, sizeof(float) * 16);
+        float *result_cuda = frame2baselink2d_T_cuda + i * 16;
         frame2baselink_T_cuda[i] = result_cuda;
+
+        for (int k = unique_time_indices[i]; k < unique_time_indices[i + 1]; k++)
+        {
+            Ts_cuda[k] = result_cuda;
+        }
     }
 
     for (int i = 0; i < num_points; i++)
     {
-        float *point_cuda;
-        cudaMallocManaged(&point_cuda, sizeof(float) * 4);
+        float *point_cuda = points2d_cuda + i * 4;
         memcpy(point_cuda, points[i].data, sizeof(float) * 4);
         point_cuda[3] = 1.0f; // homogeneous coordinate
         points_cuda[i] = point_cuda;
 
-        float *result_cuda;
-        cudaMallocManaged(&result_cuda, sizeof(float) * 4);
+        float *result_cuda = result2d_cuda + i * 4;
         result[i] = result_cuda;
-    }
-
-    for (int i = 0; i < num_frames; i++)
-    {
-        for (int k = unique_time_indices[i]; k < unique_time_indices[i + 1]; k++)
-        {
-            Ts_cuda[k] = frame2baselink_T_cuda[i];
-        }
     }
 
     // Initialize cuBLAS Handle
@@ -141,20 +150,15 @@ void deskew_cuda(
     cudaFree(baselink2lidar_T_cuda);
     cudaFree(baselink2lidar_Ts_cuda);
 
-    for (int i = 0; i < num_frames; i++)
-    {
-        cudaFree(frames_cuda[i]);
-        cudaFree(frame2baselink_T_cuda[i]);
-    }
     cudaFree(frames_cuda);
+    cudaFree(frames2d_cuda);
     cudaFree(frame2baselink_T_cuda);
+    cudaFree(frame2baselink2d_T_cuda);
 
-    for (int i = 0; i < num_points; i++)
-    {
-        cudaFree(points_cuda[i]);
-        cudaFree(result[i]);
-    }
     cudaFree(points_cuda);
+    cudaFree(points2d_cuda);
+
     cudaFree(Ts_cuda);
     cudaFree(result);
+    cudaFree(result2d_cuda);
 }
